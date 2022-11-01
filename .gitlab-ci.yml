@@ -1,0 +1,141 @@
+image: maven:3.8-jdk-11
+
+stages:
+  - build
+  - deploy
+  - notify
+
+variables:
+  MAVEN_OPTS: '-Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository --add-opens java.base/jdk.internal.misc=ALL-UNNAMED -Dio.netty.tryReflectionSetAccessible=true -noverify -XX:+AlwaysPreTouch -Djava.security.egd=file:/dev/./urandom'
+  GIT_CLONE_PATH: $CI_BUILDS_DIR/$CI_CONCURRENT_ID/$CI_PROJECT_NAME
+  FF_USE_FASTZIP: 'true'
+  ARTIFACT_COMPRESSION_LEVEL: 'fast'
+  CACHE_COMPRESSION_LEVEL: 'fast'
+  TRANSFER_METER_FREQUENCY: '5s'
+
+build:
+  stage: build
+  script:
+    - mvn clean verify -Pprod
+  cache:
+    - key: '$CI_COMMIT_REF_SLUG'
+      paths:
+        - .m2/repository
+  artifacts:
+    when: on_success
+    reports:
+      junit:
+        - target/surefire-reports/TEST-*.xml
+        - target/failsafe-reports/TEST-*.xml
+  except:
+    - main
+    - develop
+    - /^release\/.*$/
+    - /^hotfixes\/.*$/
+
+publish-image:
+  stage: build
+  script:
+    - if [ $CI_COMMIT_BRANCH = 'main' ]; then export TAG_IMAGE=latest; fi
+    - if [ $CI_COMMIT_BRANCH = 'develop' ]; then export TAG_IMAGE="latest-develop"; fi
+    - if [ ${CI_COMMIT_BRANCH%%/*} = 'release' ]; then export TAG_IMAGE="latest-release"; fi
+    - if [ ${CI_COMMIT_BRANCH%%/*} = 'hotfixes' ]; then export TAG_IMAGE="latest-hotfixes"; fi
+    - mvn clean verify -Pprod jib:build -Djib.to.tags=$TAG_IMAGE
+  variables:
+    REGISTRY_USERNAME: $registry_username
+    REGISTRY_PASSWORD: $registry_password
+  cache:
+    - key: '$CI_COMMIT_REF_SLUG'
+      paths:
+        - .m2/repository
+    - key: '$CI_COMMIT_REF_SLUG-$CI_PIPELINE_IID-target'
+      paths:
+        - target
+  artifacts:
+    when: on_success
+    reports:
+      junit:
+        - target/surefire-reports/TEST-*.xml
+        - target/failsafe-reports/TEST-*.xml
+  only:
+    - main
+    - develop
+    - /^release\/.*$/
+    - /^hotfixes\/.*$/
+  except:
+    - merge_requests
+    - triggers
+
+review:
+  stage: deploy
+  script:
+    - mvn sonar:sonar -Dsonar.host.url=$sonar_host -Dsonar.login=$sonar_token -Dsonar.buildString=$CI_JOB_ID -Dsonar.sources=src/main
+  cache:
+    - key: '$CI_COMMIT_REF_SLUG'
+      paths:
+        - .m2/repository
+    - key: '$CI_COMMIT_REF_SLUG-$CI_PIPELINE_IID-target'
+      paths:
+        - target
+      policy: pull
+  allow_failure: true
+  only:
+    - develop
+  except:
+    - merge_requests
+    - triggers
+  needs:
+    - job: publish-image
+      artifacts: true
+
+redeploy:
+  stage: deploy
+  image: curlimages/curl
+  script:
+    - if [ $CI_COMMIT_BRANCH = 'develop' ]; then export PORTAINER_HOOK="$portainer_dev_hook"; fi
+    - if [ ${CI_COMMIT_BRANCH%%/*} = 'release' ]; then export PORTAINER_HOOK="$portainer_qa_hook"; fi
+    - if [ ${CI_COMMIT_BRANCH%%/*} = 'hotfixes' ]; then export PORTAINER_HOOK="$portainer_hf_hook"; fi
+    - for I in $PORTAINER_HOOK; do echo $I; curl --fail --request POST --url $I ; echo ''; done
+  only:
+    - develop
+    - /^release\/.*$/
+    - /^hotfixes\/.*$/
+  except:
+    - merge_requests
+    - triggers
+  needs:
+    - job: publish-image
+
+notification:
+  stage: notify
+  image: registry.crip.conacyt.mx/library/rocket-notify
+  variables:
+    ROCKET_TOKEN: $rocket_token
+    ROCKET_USER: $rocket_user
+  script:
+    - rocket-notify https://chat.crip.conacyt.mx rizoma-registro
+  allow_failure: true
+  only:
+    - main
+    - /^release\/.*$/
+    - /^hotfixes\/.*$/
+  except:
+    - merge_requests
+    - triggers
+
+notification-error:
+  stage: notify
+  image: registry.crip.conacyt.mx/library/rocket-notify
+  variables:
+    ROCKET_TOKEN: $rocket_token
+    ROCKET_USER: $rocket_user
+    ERROR_MGS: Ocurrió error
+  script:
+    - rocket-notify https://chat.crip.conacyt.mx rizoma-registro
+  when: on_failure
+  allow_failure: true
+  only:
+    - main
+    - develop
+    - /^release\/.*$/
+    - /^hotfixes\/.*$/

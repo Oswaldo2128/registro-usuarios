@@ -1,0 +1,85 @@
+{
+  "register": {
+    "title": "Registration",
+    "form": {
+      "button": "Continue"
+    },
+    "no-curp": "¿No conoces tu CURP?",
+    "curp": {
+      "label": "Ingresa tu CURP",
+      "placeHolder": "Ej. MAHJ280603MSPRRV09",
+      "validations": {
+        "required": "El campo CURP es requerido",
+        "minMessage": "",
+        "maxMessage": "",
+        "regexMessage": "Ingresa un CURP valido."
+      }
+    },
+    "login": {
+      "label": "Ingresa tu ID de Rizoma",
+      "placeHolder": "Identificador único de rizoma",
+      "validations": {
+        "required": "El campo LOGIN es requerido",
+        "minMessage": "",
+        "maxMessage": "",
+        "regexMessage": "Ingresa un LOGIN valido."
+      }
+    },
+    "email": {
+      "label": "Correo electrónico",
+      "placeHolder": "Ej. nombre@correo.com",
+      "validations": {
+        "required": "El campo Correo electrónico es requerido",
+        "minMessage": "",
+        "maxMessage": "",
+        "regexMessage": "Correo electrónico invalido."
+      }
+    },
+    "confirm-email": {
+      "label": "Confirma tu correo electrónico",
+      "placeHolder": "Ej. nombre@correo.com",
+      "validations": {
+        "required": "El campo Correo electrónico es requerido",
+        "minMessage": "",
+        "maxMessage": "",
+        "regexMessage": "El correo electrónico no coincide."
+      }
+    },
+    "password": {
+      "label": "Contraseña",
+      "placeHolder": "",
+      "validations": {
+        "required": "El campo Contraseña es requerido",
+        "minMessage": "",
+        "maxMessage": "",
+        "regexMessage": "La contraseña es invalida."
+      }
+    },
+    "confirm-password": {
+      "label": "Confirma tu contraseña",
+      "placeHolder": "",
+      "validations": {
+        "required": "El campo para Confirmar contraseña es requerido",
+        "minMessage": "",
+        "maxMessage": "",
+        "regexMessage": "La contraseña no coincide."
+      }
+    },
+    "messages": {
+      "validate": {
+        "login": {
+          "required": "Your username is required.",
+          "minlength": "Your username is required to be at least 1 character.",
+          "maxlength": "Your username cannot be longer than 50 characters.",
+          "pattern": "Your username is invalid."
+        }
+      },
+      "success": "<strong>Registration saved!</strong> Please check your email for confirmation.",
+      "error": {
+        "fail": "<strong>Registration failed!</strong> Please try again later.",
+        "userexists": "<strong>Login name already registered!</strong> Please choose another one.",
+        "emailexists": "<strong>Email is already in use!</strong> Please choose another one."
+      }
+    }
+  }
+}
